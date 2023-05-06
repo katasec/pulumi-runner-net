@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyName>Katasec.PulumiRunner</AssemblyName>
+    <TargetFramework>net7.0</TargetFramework>
+    <RootNamespace>Katasec</RootNamespace>
+	<AssemblyName>Katasec.PulumiRunner</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

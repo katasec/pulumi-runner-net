@@ -9,4 +9,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="LibGit2Sharp" Version="0.27.2" />
+    <PackageReference Include="Pulumi.Automation" Version="3.54.1" />
+  </ItemGroup>
+
 </Project>

@@ -1,3 +1,5 @@
+using Katasec.PulumiRunner;
+
 namespace Katasec.PulumiRunner.Test;
 
 public class Tests
@@ -8,8 +10,10 @@ public class Tests
     }
 
     [Test]
-    public void Test1()
+    public async Task Test1()
     {
-        Assert.Pass();
+        //var p = new RemoteProgramArgs("azurecloudspace");
+        //await p.PulumiUp();
+
     }
 }

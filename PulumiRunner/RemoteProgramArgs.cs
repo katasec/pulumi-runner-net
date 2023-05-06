@@ -15,16 +15,18 @@ public class RemoteProgramArgs
     string _gitUrl = "";
     string _projectPath = "";
     LocalProgramArgs _stackArgs ;
+    public WorkspaceStack Stack;
 
     public RemoteProgramArgs(string stackName, string gitUrl, string projectPath="")
     {
         _stackName = stackName;
         _gitUrl = gitUrl;
         _projectPath = projectPath;
-        _stackArgs  = SetupLocalPulumiProgram();
+        (Stack, _stackArgs)  = SetupLocalPulumiProgram().Result;
     }
 
-    public LocalProgramArgs SetupLocalPulumiProgram()
+
+    private async Task<(WorkspaceStack,LocalProgramArgs)> SetupLocalPulumiProgram()
     {
 
         // Get repo name from http url
@@ -43,9 +45,13 @@ public class RemoteProgramArgs
         _workDir = Path.Combine(destDir, _projectPath);
         _stackArgs = new LocalProgramArgs(_stackName, _workDir);
 
-        return _stackArgs;
+        // Create Pulumi Stack: pulumi new
+        var stack = await LocalWorkspace.CreateOrSelectStackAsync(_stackArgs);
+
+
+        return (stack, _stackArgs);
     }
-    public async Task PulumiUp()
+    public async Task<UpResult> Up()
     {
         // Create Pulumi Stack: pulumi new
         var stack = await LocalWorkspace.CreateOrSelectStackAsync(_stackArgs);
@@ -63,16 +69,44 @@ public class RemoteProgramArgs
             foreach (var change in result.Summary.ResourceChanges)
                 Console.WriteLine($"    {change.Key}: {change.Value}");
         }
+
+        return result;
     }
 
-    string GetTemporaryDirectory()
+    public async Task<UpResult> PulumiUp()
+    {
+        return await Up();
+    }
+    public async Task<UpdateResult> Destroy()
+    {
+        // Create Pulumi Stack: pulumi new
+        var stack = await LocalWorkspace.CreateOrSelectStackAsync(_stackArgs);
+
+        // Refresh stack: pulumi refresh
+        await stack.RefreshAsync(new RefreshOptions { OnStandardOutput = Console.WriteLine });
+
+        // Run a pulumi Up
+        var result = await stack.DestroyAsync(new DestroyOptions { OnStandardOutput = Console.WriteLine });
+
+        // Output results
+        if (result.Summary.ResourceChanges != null)
+        {
+            Console.WriteLine("Update summary:");
+            foreach (var change in result.Summary.ResourceChanges)
+                Console.WriteLine($"    {change.Key}: {change.Value}");
+        }
+
+        return result;
+    }
+
+    private string GetTemporaryDirectory()
     {
         string tempDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         Directory.CreateDirectory(tempDirectory);
         return tempDirectory;
     }
 
-    void CloneRepo(string gitUrl, string destDir)
+    private void CloneRepo(string gitUrl, string destDir)
     {
         // Clone fails if destination already exists
         if (Directory.Exists(destDir))

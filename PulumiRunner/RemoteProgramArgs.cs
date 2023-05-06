@@ -10,23 +10,23 @@ namespace Katasec.PulumiRunner;
 public class RemoteProgramArgs
 {
 
-    string _workDir = "";
+    public string WorkDir {get;}
+    public WorkspaceStack Stack { get; }
+
     string _stackName = "azurecloudspace-handler";
     string _gitUrl = "";
     string _projectPath = "";
-    LocalProgramArgs _stackArgs ;
-    public WorkspaceStack Stack;
 
     public RemoteProgramArgs(string stackName, string gitUrl, string projectPath="")
     {
         _stackName = stackName;
         _gitUrl = gitUrl;
         _projectPath = projectPath;
-        (Stack, _stackArgs)  = SetupLocalPulumiProgram().Result;
+        (Stack, WorkDir)  = SetupLocalPulumiProgram().Result;
     }
 
 
-    private async Task<(WorkspaceStack,LocalProgramArgs)> SetupLocalPulumiProgram()
+    private async Task<(WorkspaceStack, string)> SetupLocalPulumiProgram()
     {
 
         // Get repo name from http url
@@ -42,25 +42,22 @@ public class RemoteProgramArgs
         CloneRepo(_gitUrl, destDir);
 
         // Setup pulumi program in the project path
-        _workDir = Path.Combine(destDir, _projectPath);
-        _stackArgs = new LocalProgramArgs(_stackName, _workDir);
+        var workDir = Path.Combine(destDir, _projectPath);
+        var stackArgs = new LocalProgramArgs(_stackName, workDir);
 
         // Create Pulumi Stack: pulumi new
-        var stack = await LocalWorkspace.CreateOrSelectStackAsync(_stackArgs);
+        var stack = await LocalWorkspace.CreateOrSelectStackAsync(stackArgs);
 
 
-        return (stack, _stackArgs);
+        return (stack,  workDir);
     }
     public async Task<UpResult> Up()
     {
-        // Create Pulumi Stack: pulumi new
-        var stack = await LocalWorkspace.CreateOrSelectStackAsync(_stackArgs);
-
         // Refresh stack: pulumi refresh
-        await stack.RefreshAsync(new RefreshOptions { OnStandardOutput = Console.WriteLine });
+        await Stack.RefreshAsync(new RefreshOptions { OnStandardOutput = Console.WriteLine });
 
         // Run a pulumi Up
-        var result = await stack.UpAsync(new UpOptions { OnStandardOutput = Console.WriteLine });
+        var result = await Stack.UpAsync(new UpOptions { OnStandardOutput = Console.WriteLine });
 
         // Output results
         if (result.Summary.ResourceChanges != null)
@@ -79,14 +76,12 @@ public class RemoteProgramArgs
     }
     public async Task<UpdateResult> Destroy()
     {
-        // Create Pulumi Stack: pulumi new
-        var stack = await LocalWorkspace.CreateOrSelectStackAsync(_stackArgs);
 
         // Refresh stack: pulumi refresh
-        await stack.RefreshAsync(new RefreshOptions { OnStandardOutput = Console.WriteLine });
+        await Stack.RefreshAsync(new RefreshOptions { OnStandardOutput = Console.WriteLine });
 
         // Run a pulumi Up
-        var result = await stack.DestroyAsync(new DestroyOptions { OnStandardOutput = Console.WriteLine });
+        var result = await Stack.DestroyAsync(new DestroyOptions { OnStandardOutput = Console.WriteLine });
 
         // Output results
         if (result.Summary.ResourceChanges != null)

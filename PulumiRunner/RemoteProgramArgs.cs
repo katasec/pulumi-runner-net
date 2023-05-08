@@ -2,8 +2,10 @@
 using LibGit2Sharp.Handlers;
 using Pulumi;
 using Pulumi.Automation;
+using Serilog;
 using System;
 using System.Diagnostics;
+using System.Text;
 using YamlDotNet.Serialization;
 
 namespace Katasec.PulumiRunner;
@@ -32,6 +34,8 @@ public class RemoteProgram
     string _stackName = "azurecloudspace-handler";
     string _gitUrl = "";
     string _projectPath = "";
+    ILogger _logger;
+
     /// <summary>
     /// Clones the provided Git URL
     /// </summary>
@@ -40,11 +44,17 @@ public class RemoteProgram
     /// <param name="projectPath"></param>
     public RemoteProgram(string stackName, string gitUrl, string projectPath="")
     {
+        _logger = new LoggerConfiguration()
+                            .MinimumLevel.Debug()
+                            .WriteTo.Console()
+                            .CreateLogger();
+
         _stackName = stackName;
         _gitUrl = gitUrl;
         _projectPath = projectPath;
         (Stack, WorkDir)  = SetupLocalPulumiProgram().Result;
         ProjectConfig = GetProjectConfig();
+
     }
 
 
@@ -61,7 +71,7 @@ public class RemoteProgram
         // Generate fully qualified clone destination
         
         var destDir = Path.Combine(tmpDir.FullName, repoName);
-        Console.WriteLine($"Using dest dir {destDir}");
+        _logger.Information($"Using dest dir {destDir}");
         CloneRepo(_gitUrl, destDir);
 
         // Setup pulumi program in the project path
@@ -77,17 +87,17 @@ public class RemoteProgram
     public async Task<UpResult> Up()
     {
         // Refresh stack: pulumi refresh
-        await Stack.RefreshAsync(new RefreshOptions { OnStandardOutput = Console.WriteLine });
+        await Stack.RefreshAsync(new RefreshOptions { OnStandardOutput = _logger.Information });
 
         // Run a pulumi Up
-        var result = await Stack.UpAsync(new UpOptions { OnStandardOutput = Console.WriteLine });
+        var result = await Stack.UpAsync(new UpOptions { OnStandardOutput = _logger.Information });
 
         // Output results
         if (result.Summary.ResourceChanges != null)
         {
-            Console.WriteLine("update summary:");
+            _logger.Information("update summary:");
             foreach (var change in result.Summary.ResourceChanges)
-                Console.WriteLine($"    {change.Key}: {change.Value}");
+                _logger.Information($"    {change.Key}: {change.Value}");
         }
 
         return result;
@@ -101,17 +111,17 @@ public class RemoteProgram
     {
 
         // Refresh stack: pulumi refresh
-        await Stack.RefreshAsync(new RefreshOptions { OnStandardOutput = Console.WriteLine });
+        await Stack.RefreshAsync(new RefreshOptions { OnStandardOutput = _logger.Information });
 
         // Run a pulumi Up
-        var result = await Stack.DestroyAsync(new DestroyOptions { OnStandardOutput = Console.WriteLine });
+        var result = await Stack.DestroyAsync(new DestroyOptions { OnStandardOutput = _logger.Information });
 
         // Output results
         if (result.Summary.ResourceChanges != null)
         {
-            Console.WriteLine("Update summary:");
+            _logger.Information("Update summary:");
             foreach (var change in result.Summary.ResourceChanges)
-                Console.WriteLine($"    {change.Key}: {change.Value}");
+                _logger.Information($"    {change.Key}: {change.Value}");
         }
 
         return result;
@@ -129,7 +139,7 @@ public class RemoteProgram
         // Clone fails if destination already exists
         if (Directory.Exists(destDir))
         {
-            Console.WriteLine($"Directory {destDir} exists and is not an empty directory, please fix and try again.");
+            _logger.Information($"Directory {destDir} exists and is not an empty directory, please fix and try again.");
             Environment.Exit(1);
         }
 
@@ -154,7 +164,7 @@ public class RemoteProgram
     {
         if (arkdata != "")
         {
-            Console.WriteLine("Injecting config...");
+            _logger.Information("Injecting config...");
             // Indent the data by 4 spaces. The configfile looks like this. Two spaces for top level object 'config'
             // and another two space so the config data is nested under the "<typename>:arkdata" object
             //

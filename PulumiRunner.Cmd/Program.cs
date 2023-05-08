@@ -13,7 +13,7 @@ string readYamlToAdd()
 
 var arkdata = readYamlToAdd();
 
-var p = new RemoteProgramArgs(
+var p = new RemoteProgram(
     stackName: "dev", 
     gitUrl:"https://github.com/katasec/library.git", 
     projectPath: "azurecloudspace-handler"

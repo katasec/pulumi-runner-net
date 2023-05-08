@@ -8,7 +8,7 @@ using YamlDotNet.Serialization;
 
 namespace Katasec.PulumiRunner;
 
-public class RemoteProgramArgs
+public class RemoteProgram
 {
 
     public string WorkDir { get; }
@@ -38,7 +38,7 @@ public class RemoteProgramArgs
     /// <param name="stackName"></param>
     /// <param name="gitUrl"></param>
     /// <param name="projectPath"></param>
-    public RemoteProgramArgs(string stackName, string gitUrl, string projectPath="")
+    public RemoteProgram(string stackName, string gitUrl, string projectPath="")
     {
         _stackName = stackName;
         _gitUrl = gitUrl;

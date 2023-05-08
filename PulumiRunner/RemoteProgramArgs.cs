@@ -32,22 +32,19 @@ public class RemoteProgramArgs
     string _stackName = "azurecloudspace-handler";
     string _gitUrl = "";
     string _projectPath = "";
-    string _arkdata = "";
     /// <summary>
     /// Clones the provided Git URL
     /// </summary>
     /// <param name="stackName"></param>
     /// <param name="gitUrl"></param>
     /// <param name="projectPath"></param>
-    public RemoteProgramArgs(string stackName, string gitUrl, string projectPath="", string arkdata="")
+    public RemoteProgramArgs(string stackName, string gitUrl, string projectPath="")
     {
         _stackName = stackName;
         _gitUrl = gitUrl;
         _projectPath = projectPath;
-        _arkdata = arkdata;
         (Stack, WorkDir)  = SetupLocalPulumiProgram().Result;
         ProjectConfig = GetProjectConfig();
-        injectConfig();
     }
 
 
@@ -153,9 +150,9 @@ public class RemoteProgramArgs
         var x = Repository.Clone(gitUrl, destDir, new CloneOptions { OnProgress = gitProgress });
     }
 
-    private void injectConfig()
+    public void InjectArkData(string arkdata)
     {
-        if (_arkdata != "")
+        if (arkdata != "")
         {
             Console.WriteLine("Injecting config...");
             // Indent the data by 4 spaces. The configfile looks like this. Two spaces for top level object 'config'
@@ -166,7 +163,7 @@ public class RemoteProgramArgs
             //      <azurecloudspace>:arkdata:
             //        name: default
             //        hub:
-            var input = _arkdata;
+            var input = arkdata;
             string output = string.Join("\n", input.Split('\n').Select(line => "    " + line));
 
 

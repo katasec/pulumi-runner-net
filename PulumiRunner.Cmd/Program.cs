@@ -1,6 +1,23 @@
 ﻿using Katasec.PulumiRunner;
+using Pulumi;
+using YamlDotNet.Serialization;
 
-var p = new RemoteProgramArgs("azurecloudspace", "https://github.com/katasec/library.git", "azurecloudspace-handler");
 
-Console.WriteLine("WorkDir:" + p.WorkDir);
-Console.WriteLine("Stack:" + p.Stack.Name);
+string readYamlToAdd()
+{
+    var path = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+    path = Path.Join(path, "tmp", "test.yaml");
+    var txt = File.ReadAllText(path);
+    return txt;
+}
+
+var arkdata = readYamlToAdd();
+
+var p = new RemoteProgramArgs(
+    stackName: "dev", 
+    gitUrl:"https://github.com/katasec/library.git", 
+    projectPath: "azurecloudspace-handler",
+    arkdata: arkdata
+);
+
+

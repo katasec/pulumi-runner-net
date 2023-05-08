@@ -4,25 +4,50 @@ using Pulumi;
 using Pulumi.Automation;
 using System;
 using System.Diagnostics;
+using YamlDotNet.Serialization;
 
 namespace Katasec.PulumiRunner;
 
 public class RemoteProgramArgs
 {
 
-    public string WorkDir {get;}
+    public string WorkDir { get; }
     public WorkspaceStack Stack { get; }
+    public string ConfigFile {
+        get {
+            return Path.Join(WorkDir, $"pulumi.{_stackName}.yaml");
+        }
+    }
+
+    public ProjectConfig ProjectConfig { get; }
+
+    public string ProjectConfigFile
+    {
+        get
+        {
+            return Path.Join(WorkDir, $"Pulumi.yaml");
+        }
+    }
 
     string _stackName = "azurecloudspace-handler";
     string _gitUrl = "";
     string _projectPath = "";
-
-    public RemoteProgramArgs(string stackName, string gitUrl, string projectPath="")
+    string _arkdata = "";
+    /// <summary>
+    /// Clones the provided Git URL
+    /// </summary>
+    /// <param name="stackName"></param>
+    /// <param name="gitUrl"></param>
+    /// <param name="projectPath"></param>
+    public RemoteProgramArgs(string stackName, string gitUrl, string projectPath="", string arkdata="")
     {
         _stackName = stackName;
         _gitUrl = gitUrl;
         _projectPath = projectPath;
+        _arkdata = arkdata;
         (Stack, WorkDir)  = SetupLocalPulumiProgram().Result;
+        ProjectConfig = GetProjectConfig();
+        injectConfig();
     }
 
 
@@ -37,6 +62,7 @@ public class RemoteProgramArgs
         var tmpDir = Directory.CreateDirectory(GetTemporaryDirectory());
 
         // Generate fully qualified clone destination
+        
         var destDir = Path.Combine(tmpDir.FullName, repoName);
         Console.WriteLine($"Using dest dir {destDir}");
         CloneRepo(_gitUrl, destDir);
@@ -96,7 +122,7 @@ public class RemoteProgramArgs
 
     private string GetTemporaryDirectory()
     {
-        string tempDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        string tempDirectory = Path.Combine(Path.GetTempPath(), "pulumi-runner", Path.GetRandomFileName());
         Directory.CreateDirectory(tempDirectory);
         return tempDirectory;
     }
@@ -125,5 +151,42 @@ public class RemoteProgramArgs
 
         // Clone repo using progress handler
         var x = Repository.Clone(gitUrl, destDir, new CloneOptions { OnProgress = gitProgress });
+    }
+
+    private void injectConfig()
+    {
+        if (_arkdata != "")
+        {
+            Console.WriteLine("Injecting config...");
+            // Indent the data by 4 spaces. The configfile looks like this. Two spaces for top level object 'config'
+            // and another two space so the config data is nested under the "<typename>:arkdata" object
+            //
+            //   config:
+            //      azure-native:location: WestUS2
+            //      <azurecloudspace>:arkdata:
+            //        name: default
+            //        hub:
+            var input = _arkdata;
+            string output = string.Join("\n", input.Split('\n').Select(line => "    " + line));
+
+
+            //Stack.SetConfigAsync("dummydata", new ConfigValue("arkdummydata")).Wait();
+
+            // Prefix data with stackname as per pulumi
+            var prefix = $"  {ProjectConfig.name}:arkdata:\n";
+            var config = prefix + output;
+
+            // Inject the config for this stack into the config file
+            using StreamWriter writer = File.AppendText(ConfigFile);
+            writer.WriteLine(config);
+        }
+    }
+
+    private ProjectConfig GetProjectConfig()
+    {
+        var projectConfig = File.ReadAllText(ProjectConfigFile);
+        var deserializer = new DeserializerBuilder().Build();
+        var x = deserializer.Deserialize<ProjectConfig>(projectConfig);
+        return x;
     }
 }

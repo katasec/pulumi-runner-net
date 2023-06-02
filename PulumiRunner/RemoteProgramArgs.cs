@@ -7,6 +7,7 @@ using System;
 using System.Diagnostics;
 using System.Text;
 using YamlDotNet.Serialization;
+using static Katasec.PulumiRunner.RemoteProgram;
 
 namespace Katasec.PulumiRunner;
 
@@ -34,6 +35,7 @@ public class RemoteProgram
     string _stackName = "azurecloudspace-handler";
     string _gitUrl = "";
     string _projectPath = "";
+    List<Plugin>? _plugins = new List<Plugin>();
     ILogger _logger;
 
     /// <summary>
@@ -42,21 +44,21 @@ public class RemoteProgram
     /// <param name="stackName"></param>
     /// <param name="gitUrl"></param>
     /// <param name="projectPath"></param>
-    public RemoteProgram(string stackName, string gitUrl, string projectPath="")
+    public RemoteProgram(string stackName, string gitUrl, string projectPath="", List<Plugin>? plugins = null)
     {
         _logger = new LoggerConfiguration()
                             .MinimumLevel.Debug()
                             .WriteTo.Console()
                             .CreateLogger();
-
+        _plugins = plugins;
         _stackName = stackName;
         _gitUrl = gitUrl;
         _projectPath = projectPath;
         (Stack, WorkDir)  = SetupLocalPulumiProgram().Result;
         ProjectConfig = GetProjectConfig();
-
     }
 
+    public record Plugin(string Name, string Version);
 
     private async Task<(WorkspaceStack, string)> SetupLocalPulumiProgram()
     {
@@ -81,6 +83,11 @@ public class RemoteProgram
         // Create Pulumi Stack: pulumi new
         var stack = await LocalWorkspace.CreateOrSelectStackAsync(stackArgs);
 
+        // Install Plugins if any
+        _plugins?.ForEach(x => {
+            _logger.Information($"Installing Plugin {x.Name}:{x.Version}");
+            stack.Workspace.InstallPluginAsync(x.Name, x.Version, PluginKind.Resource).Wait();
+        });
 
         return (stack,  workDir);
     }

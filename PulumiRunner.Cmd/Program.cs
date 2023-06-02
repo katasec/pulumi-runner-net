@@ -16,7 +16,11 @@ var arkdata = readYamlToAdd();
 var p = new RemoteProgram(
     stackName: "dev", 
     gitUrl:"https://github.com/katasec/library.git", 
-    projectPath: "azurecloudspace-handler"
+    projectPath: "azurecloudspace-handler",
+    plugins: new List<RemoteProgram.Plugin>
+    {
+        new RemoteProgram.Plugin("azure-native", "v1.39.0")
+    }
 );
 
 p.InjectArkData(arkdata);

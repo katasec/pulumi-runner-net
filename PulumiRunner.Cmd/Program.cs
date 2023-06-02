@@ -19,7 +19,7 @@ var p = new RemoteProgram(
     projectPath: "azurecloudspace-handler",
     plugins: new List<RemoteProgram.Plugin>
     {
-        new RemoteProgram.Plugin("azure-native", "v1.39.0")
+        new RemoteProgram.Plugin("azure-native", "v1.102.0")
     }
 );
 
